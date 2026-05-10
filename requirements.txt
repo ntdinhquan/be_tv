@@ -1,0 +1,17 @@
+# Web Server & API
+fastapi
+uvicorn
+python-multipart
+
+# AI Models & Processing
+faster-whisper
+google-genai
+edge-tts
+
+# Hệ thống (Thư viện bổ trợ cho xử lý bất đồng bộ)
+asyncio
+httpx
+
+# Tiện ích
+google-generativeai
+tenacity

@@ -5,7 +5,6 @@ import shutil
 import os
 import uuid
 
-# Import các hàm bạn đã viết (đã được sửa đổi nhẹ ở trên)
 from stt import speech_to_text
 from text_utils import split_sentences, merge_short_sentences
 from translate import translate_all
@@ -16,10 +15,10 @@ from fastapi.responses import Response
 
 app = FastAPI()
 
-# Cấu hình CORS để Frontend gọi được API
+# config CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Trong thực tế nên để "http://localhost:3000"
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,7 +100,6 @@ async def generate_video(
     bgm_end: float = Form(...),
     bgm: UploadFile = File(None)
 ):
-    # 1. Làm sạch văn bản: Bỏ xuống dòng và khoảng trắng thừa
     clean_text = " ".join(script.split()) 
     print(f"DEBUG: Script received and cleaned: '{clean_text}'") 
 
@@ -119,7 +117,6 @@ async def generate_video(
         rate_str = f"{rate:+d}%"
         print(f"DEBUG: Rate string: '{rate_str}' | Voice: '{voice}'")
 
-        # 3. Gọi TTS (Sử dụng await trực tiếp như bạn đã sửa)
         from tts import save_tts_audio
         await save_tts_audio(clean_text, tts_audio_path, voice, rate_str)
 
@@ -127,7 +124,6 @@ async def generate_video(
         if not os.path.exists(tts_audio_path) or os.path.getsize(tts_audio_path) == 0:
             raise Exception("TTS failed: Audio file is empty or not created.")
 
-        # --- PHẦN XỬ LÝ BGM (Giữ nguyên logic của bạn) ---
         if bgm and bgm.filename:
             bgm_audio_path = os.path.join(UPLOAD_DIR, f"{unique_id}_bgm{os.path.splitext(bgm.filename)[1]}")
             with open(bgm_audio_path, "wb") as buffer:
