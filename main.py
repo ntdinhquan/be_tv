@@ -32,6 +32,26 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Mount thư mục outputs để frontend có thể tải/xem video kết quả
 app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
+@app.get("/")
+def read_root():
+    return {"message": "MVID API is running!"}
+
+# Thêm endpoint này vào main.py
+
+@app.post("/upload-only")
+async def upload_only(file: UploadFile = File(...)):
+    unique_id = str(uuid.uuid4())
+    ext = os.path.splitext(file.filename)[1]
+    input_path = os.path.join(UPLOAD_DIR, f"manual_{unique_id}{ext}")
+    
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {
+        "message": "success",
+        "video_path": input_path
+    }
+
 @app.post("/preview-voice")
 async def preview_voice(
     text: str = Form(...),
@@ -143,7 +163,7 @@ async def generate_video(
         
         return {
             "message": "success",
-            "output_url": f"http://localhost:8000/outputs/{os.path.basename(output_video_path)}"
+            "output_url": f"https://quan2002-mvid-api.hf.space/outputs/{os.path.basename(output_video_path)}"
         }
     except Exception as e:
         print(f"Error during video generation: {e}")
