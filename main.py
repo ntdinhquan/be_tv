@@ -163,7 +163,7 @@ async def generate_video(
         
         return {
             "message": "success",
-            "output_url": f"https://quan2002-mvid-api.hf.space/outputs/{os.path.basename(output_video_path)}"
+            "output_url": f"http://localhost:8000/outputs/{os.path.basename(output_video_path)}"
         }
     except Exception as e:
         print(f"Error during video generation: {e}")
