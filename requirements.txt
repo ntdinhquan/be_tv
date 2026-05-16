@@ -15,3 +15,7 @@ httpx
 # Tiện ích
 google-generativeai
 tenacity
+
+#download video
+yt-dlp
+httpx

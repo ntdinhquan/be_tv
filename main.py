@@ -1,10 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import yt_dlp
 import shutil
 import os
 import uuid
 
+from typing import Optional
 from stt import speech_to_text
 from text_utils import split_sentences, merge_short_sentences
 from translate import translate_all
@@ -12,6 +14,7 @@ from tts import text_to_speech_full
 from tts import save_tts_audio
 from merge_video import merge_audio_to_video
 from fastapi.responses import Response
+from fastapi import Requests
 
 app = FastAPI()
 
@@ -31,12 +34,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Mount thư mục outputs để frontend có thể tải/xem video kết quả
 app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.get("/")
 def read_root():
     return {"message": "MVID API is running!"}
 
-# Thêm endpoint này vào main.py
 
 @app.post("/upload-only")
 async def upload_only(file: UploadFile = File(...)):
@@ -51,6 +54,35 @@ async def upload_only(file: UploadFile = File(...)):
         "message": "success",
         "video_path": input_path
     }
+
+@app.post("/download-url")
+async def download_url(request: Requests, url: str = Form(...)):
+    try:
+        unique_id = str(uuid.uuid4())
+        output_filename = f"dl_{unique_id}.mp4"
+        output_path = os.path.join(UPLOAD_DIR, output_filename)
+
+        ydl_opts = {
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': output_path,
+            'quiet': True,
+            'no_warnings': True,
+            'merge_output_format': 'mp4' # Ép FFmpeg ghép ra file .mp4
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.extract_info(url, download=True)
+            
+        base_url = str(request.base_url).rstrip("/")
+        preview_url = f"{base_url}/uploads/{output_filename}"
+
+        return {
+            "message": "success",
+            "video_path": output_path, # Đường dẫn vật lý cho AI xử lý
+            "preview_url": preview_url # Link trực tiếp cho FE hiện hình
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi tải video: {str(e)}")
 
 @app.post("/preview-voice")
 async def preview_voice(
@@ -79,17 +111,21 @@ async def preview_voice(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/extract-script")
-async def extract_script(file: UploadFile = File(...), api_key: str = Form(...)):
+async def extract_script(file: Optional[UploadFile] = File(None), api_key: str = Form(...), video_path: Optional[str] = Form(None)):
     if not api_key:
         raise HTTPException(status_code=400, detail="Thiếu Gemini API Key")
 
     # Lưu video
-    unique_id = str(uuid.uuid4())
-    ext = os.path.splitext(file.filename)[1]
-    input_path = os.path.join(UPLOAD_DIR, f"{unique_id}{ext}")
-    
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    if file and file.filename:
+        unique_id = str(uuid.uuid4())
+        ext = os.path.splitext(file.filename)[1]
+        input_path = os.path.join(UPLOAD_DIR, f"{unique_id}{ext}")
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    elif video_path and os.path.exists(video_path):
+        input_path = video_path # Dùng luôn video có sẵn
+    else:
+        raise HTTPException(status_code=400, detail="Vui lòng tải lên video hoặc cung cấp link.")
 
     try:
         # 1. STT -> Split -> Merge
@@ -163,7 +199,7 @@ async def generate_video(
         
         return {
             "message": "success",
-            "output_url": f"http://localhost:8000/outputs/{os.path.basename(output_video_path)}"
+            "output_url": f"https://quan2002-mvid-api.hf.space/outputs/{os.path.basename(output_video_path)}"
         }
     except Exception as e:
         print(f"Error during video generation: {e}")
