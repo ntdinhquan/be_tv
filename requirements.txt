@@ -6,16 +6,17 @@ python-multipart
 # AI Models & Processing
 faster-whisper
 google-genai
+google-generativeai
 edge-tts
 
-# Hệ thống (Thư viện bổ trợ cho xử lý bất đồng bộ)
-asyncio
-httpx
+# Xử lý Video & Âm thanh
+moviepy
+ffmpeg-python
 
-# Tiện ích
-google-generativeai
-tenacity
-
-#download video
+# Download Video ngắn
 yt-dlp
+
+# Hệ thống & Kết nối API bóc tách
 httpx
+asyncio
+tenacity
